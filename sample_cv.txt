@@ -1,0 +1,61 @@
+John Doe
+Senior Software Engineer
+john.doe@email.com | (555) 123-4567 | LinkedIn: linkedin.com/in/johndoe
+
+PROFESSIONAL SUMMARY
+Experienced backend developer with 5+ years of experience building scalable web applications and APIs. 
+Proficient in Python, Django, and cloud technologies. Strong background in system design and database optimization.
+
+TECHNICAL SKILLS
+Programming Languages: Python, JavaScript, Java, SQL
+Frameworks: Django, FastAPI, Flask, React
+Databases: PostgreSQL, MySQL, Redis, MongoDB
+Cloud Platforms: AWS (EC2, S3, RDS, Lambda), Docker, Kubernetes
+Tools: Git, Jenkins, Postman, Nginx, Linux
+
+PROFESSIONAL EXPERIENCE
+
+Senior Backend Developer | TechCorp Inc. | 2021 - Present
+• Led development of microservices architecture serving 1M+ daily active users
+• Built REST APIs with 99.9% uptime handling $10M+ annual transaction volume
+• Optimized database queries reducing response time by 40%
+• Mentored team of 4 junior developers and conducted code reviews
+• Implemented CI/CD pipelines using Jenkins and Docker
+
+Backend Developer | StartupXYZ | 2019 - 2021
+• Developed e-commerce platform backend supporting 100K+ registered users
+• Designed and implemented real-time notification system using WebSockets
+• Integrated third-party payment gateways (Stripe, PayPal) with 99.95% success rate
+• Created automated testing suite achieving 85% code coverage
+
+Junior Developer | WebSolutions Ltd. | 2018 - 2019
+• Built web applications using Django and PostgreSQL
+• Collaborated on agile development team of 8 members
+• Implemented user authentication and authorization systems
+• Participated in daily standups and sprint planning
+
+PROJECTS
+
+Real-Time Analytics Dashboard
+• Built dashboard for monitoring application metrics with 50K+ concurrent users
+• Technologies: Python, FastAPI, Redis, React, WebSockets
+• Implemented real-time data streaming and visualization
+
+E-commerce Microservices Platform
+• Designed microservices architecture for online marketplace
+• Technologies: Python, Docker, Kubernetes, PostgreSQL, RabbitMQ
+• Achieved 99.9% uptime with auto-scaling capabilities
+
+EDUCATION
+Bachelor of Science in Computer Science
+University of Technology | 2018
+GPA: 3.8/4.0
+
+CERTIFICATIONS
+• AWS Certified Developer - Associate (2022)
+• Python Institute - PCAP Certified Associate (2020)
+
+ACHIEVEMENTS
+• Led migration project reducing infrastructure costs by 30%
+• Received "Employee of the Month" award for exceptional performance (2022)
+• Open source contributor with 500+ GitHub stars across projects

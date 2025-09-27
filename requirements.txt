@@ -1,0 +1,13 @@
+fastapi
+uvicorn[standard]
+python-multipart
+aiofiles
+pydantic
+sqlalchemy
+aiosqlite
+google-generativeai
+python-docx
+tenacity
+httpx
+python-dotenv
+pypdf2
