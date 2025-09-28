@@ -104,6 +104,88 @@ async def upload_files(
         logger.error(f"File upload error: {str(e)}")
         raise HTTPException(status_code=500, detail=f"File upload failed: {str(e)}")
 
+@router.post("/evaluate-direct", response_model=TaskResponse)
+async def evaluate_files_direct(
+    cv_file: UploadFile = File(..., description="CV file (PDF, DOCX, or TXT)"),
+    project_report: UploadFile = File(..., description="Project report file (PDF, DOCX, or TXT)"),
+    job_description: str = Form(default="Backend Developer position", description="Job description for evaluation"),
+    background_tasks: BackgroundTasks = BackgroundTasks(),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Upload files AND start evaluation in one step - User Friendly!
+    
+    - **cv_file**: CV file in PDF, DOCX, or TXT format
+    - **project_report**: Project report file in PDF, DOCX, or TXT format
+    - **job_description**: Job description to evaluate against (optional)
+    """
+    try:
+        # Validate file formats
+        if not DocumentProcessor.validate_file_format(cv_file.filename):
+            raise HTTPException(
+                status_code=400, 
+                detail=f"Invalid CV file format. Supported: PDF, DOCX, TXT"
+            )
+        
+        if not DocumentProcessor.validate_file_format(project_report.filename):
+            raise HTTPException(
+                status_code=400, 
+                detail=f"Invalid project report file format. Supported: PDF, DOCX, TXT"
+            )
+        
+        # Check file sizes
+        cv_content = await cv_file.read()
+        project_content = await project_report.read()
+        
+        if len(cv_content) > MAX_FILE_SIZE:
+            raise HTTPException(status_code=400, detail="CV file too large (max 10MB)")
+        if len(project_content) > MAX_FILE_SIZE:
+            raise HTTPException(status_code=400, detail="Project report file too large (max 10MB)")
+        
+        # Reset file positions
+        await cv_file.seek(0)
+        await project_report.seek(0)
+        
+        # Generate unique filenames
+        session_id = str(uuid.uuid4())
+        cv_filename = f"{session_id}_cv_{cv_file.filename}"
+        project_filename = f"{session_id}_project_{project_report.filename}"
+        
+        # Save files
+        cv_path = os.path.join(UPLOAD_DIR, cv_filename)
+        project_path = os.path.join(UPLOAD_DIR, project_filename)
+        
+        cv_saved_path = await save_upload_file(cv_file, cv_path)
+        project_saved_path = await save_upload_file(project_report, project_path)
+        
+        logger.info(f"Files uploaded successfully: CV={cv_saved_path}, Project={project_saved_path}")
+        
+        # Create evaluation task immediately
+        task = EvaluationTask(
+            cv_file_path=cv_saved_path,
+            project_report_path=project_saved_path,
+            job_description=job_description,
+            status=TaskStatus.QUEUED
+        )
+        
+        db.add(task)
+        await db.commit()
+        await db.refresh(task)
+        
+        # Start background evaluation immediately
+        pipeline = await get_evaluation_pipeline()
+        background_tasks.add_task(pipeline.run_evaluation, task.id)
+        
+        logger.info(f"Files uploaded and evaluation started: {task.id}")
+        
+        return TaskResponse(id=task.id, status=TaskStatus.QUEUED)
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Direct evaluation error: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to upload and evaluate files: {str(e)}")
+
 @router.post("/evaluate", response_model=TaskResponse)
 async def create_evaluation_task(
     cv_file_path: str = Form(..., description="Path to the uploaded CV file"),
@@ -113,11 +195,7 @@ async def create_evaluation_task(
     db: AsyncSession = Depends(get_db)
 ):
     """
-    Create an evaluation task for CV and project report
-    
-    - **cv_file_path**: Path to the uploaded CV file
-    - **project_report_path**: Path to the uploaded project report file  
-    - **job_description**: Job description to evaluate against (optional)
+    \"\"\"\n    [ADVANCED] Create evaluation task from existing file paths\n    \n    Note: Use /evaluate-direct instead for easier file upload + evaluation in one step!\n    \n    - **cv_file_path**: Path to the uploaded CV file\n    - **project_report_path**: Path to the uploaded project report file  \n    - **job_description**: Job description to evaluate against (optional)\n    \"\"\"
     """
     try:
         # Validate file paths exist
@@ -195,11 +273,12 @@ async def get_evaluation_result(
 
 @router.get("/tasks")
 async def list_tasks(
+    include_results: bool = False,
     limit: int = 50,
     offset: int = 0,
     db: AsyncSession = Depends(get_db)
 ):
-    """List all evaluation tasks with pagination"""
+    """List all evaluation tasks with pagination and optional results"""
     try:
         result = await db.execute(
             select(EvaluationTask)
@@ -209,16 +288,28 @@ async def list_tasks(
         )
         tasks = result.scalars().all()
         
+        task_list = []
+        for task in tasks:
+            task_data = {
+                "id": task.id,
+                "status": task.status,
+                "created_at": task.created_at,
+                "updated_at": task.updated_at,
+                "cv_file": task.cv_file_path.split('/')[-1] if task.cv_file_path else None,
+                "project_file": task.project_report_path.split('/')[-1] if task.project_report_path else None,
+                "job_description": task.job_description
+            }
+            
+            # Include results if requested and available
+            if include_results and task.status == TaskStatus.COMPLETED and task.result:
+                task_data["result"] = task.result
+            elif include_results and task.status == TaskStatus.FAILED and task.error_message:
+                task_data["error"] = task.error_message
+                
+            task_list.append(task_data)
+        
         return {
-            "tasks": [
-                {
-                    "id": task.id,
-                    "status": task.status,
-                    "created_at": task.created_at,
-                    "updated_at": task.updated_at
-                }
-                for task in tasks
-            ],
+            "tasks": task_list,
             "total": len(tasks)
         }
         
