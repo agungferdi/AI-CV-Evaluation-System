@@ -1,0 +1,368 @@
+import os
+from io import BytesIO
+from datetime import datetime
+from reportlab.lib.pagesizes import A4, letter
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.lib.units import inch
+from reportlab.lib.colors import HexColor, black, white
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, PageBreak
+from reportlab.platypus.tableofcontents import TableOfContents
+from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_RIGHT, TA_JUSTIFY
+import logging
+
+logger = logging.getLogger(__name__)
+
+class PDFReportService:
+    """Service for generating PDF reports from evaluation results"""
+    
+    def __init__(self):
+        self.styles = getSampleStyleSheet()
+        self._setup_custom_styles()
+    
+    def _setup_custom_styles(self):
+        """Setup custom paragraph styles"""
+        # Title style
+        self.styles.add(ParagraphStyle(
+            name='CustomTitle',
+            parent=self.styles['Title'],
+            fontSize=24,
+            spaceAfter=30,
+            textColor=HexColor('#2E86AB'),
+            alignment=TA_CENTER
+        ))
+        
+        # Subtitle style
+        self.styles.add(ParagraphStyle(
+            name='CustomSubtitle',
+            parent=self.styles['Heading2'],
+            fontSize=16,
+            spaceAfter=20,
+            spaceBefore=20,
+            textColor=HexColor('#A23B72'),
+            alignment=TA_LEFT
+        ))
+        
+        # Score style
+        self.styles.add(ParagraphStyle(
+            name='ScoreText',
+            parent=self.styles['Normal'],
+            fontSize=14,
+            spaceAfter=10,
+            textColor=HexColor('#F18F01'),
+            alignment=TA_CENTER
+        ))
+        
+        # Feedback style
+        self.styles.add(ParagraphStyle(
+            name='FeedbackText',
+            parent=self.styles['Normal'],
+            fontSize=11,
+            spaceAfter=12,
+            alignment=TA_JUSTIFY,
+            leftIndent=20,
+            rightIndent=20
+        ))
+    
+    async def generate_evaluation_report(self, task_data: dict) -> BytesIO:
+        """Generate PDF report from task evaluation data"""
+        try:
+            buffer = BytesIO()
+            doc = SimpleDocTemplate(
+                buffer,
+                pagesize=A4,
+                rightMargin=72,
+                leftMargin=72,
+                topMargin=72,
+                bottomMargin=18
+            )
+            
+            # Build the report content
+            story = []
+            
+            # Title page
+            story.extend(self._build_title_page(task_data))
+            story.append(PageBreak())
+            
+            # Executive summary
+            story.extend(self._build_executive_summary(task_data))
+            
+            # CV evaluation section
+            story.extend(self._build_cv_evaluation_section(task_data))
+            
+            # Project evaluation section  
+            story.extend(self._build_project_evaluation_section(task_data))
+            
+            # Recommendations
+            story.extend(self._build_recommendations_section(task_data))
+            
+            # Build PDF
+            doc.build(story)
+            buffer.seek(0)
+            
+            logger.info(f"Generated PDF report for task {task_data['id']}")
+            return buffer
+            
+        except Exception as e:
+            logger.error(f"Error generating PDF report: {e}")
+            raise
+    
+    def _build_title_page(self, task_data: dict) -> list:
+        """Build the title page"""
+        story = []
+        
+        # Main title
+        story.append(Paragraph("CV Evaluation Report", self.styles['CustomTitle']))
+        story.append(Spacer(1, 0.5*inch))
+        
+        # Task info table
+        task_info = [
+            ["Task ID:", task_data['id']],
+            ["Evaluation Date:", task_data['created_at'].strftime("%B %d, %Y")],
+            ["Status:", task_data['status'].title()],
+            ["Job Position:", self._extract_job_title(task_data.get('job_description', 'N/A'))]
+        ]
+        
+        task_table = Table(task_info, colWidths=[2*inch, 4*inch])
+        task_table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (0, -1), HexColor('#E8F4FD')),
+            ('TEXTCOLOR', (0, 0), (-1, -1), black),
+            ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+            ('FONTNAME', (0, 0), (0, -1), 'Helvetica-Bold'),
+            ('FONTNAME', (1, 0), (1, -1), 'Helvetica'),
+            ('FONTSIZE', (0, 0), (-1, -1), 12),
+            ('GRID', (0, 0), (-1, -1), 1, black),
+            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+            ('ROWBACKGROUNDS', (0, 0), (-1, -1), [white, HexColor('#F8F9FA')])
+        ]))
+        
+        story.append(task_table)
+        story.append(Spacer(1, 1*inch))
+        
+        # AI-powered notice
+        story.append(Paragraph(
+            "<i>This report is generated by an AI-powered evaluation system using Google Gemini AI "
+            "with Retrieval-Augmented Generation (RAG) for comprehensive candidate assessment.</i>",
+            self.styles['Normal']
+        ))
+        
+        return story
+    
+    def _build_executive_summary(self, task_data: dict) -> list:
+        """Build executive summary section"""
+        story = []
+        result = task_data.get('result', {})
+        
+        story.append(Paragraph("Executive Summary", self.styles['CustomSubtitle']))
+        
+        # Overall scores
+        cv_match = result.get('cv_match_rate', 0) * 100
+        project_score = result.get('project_score', 0)
+        
+        summary_data = [
+            ["CV Match Rate", f"{cv_match:.1f}%", self._get_rating_color(cv_match/100)],
+            ["Project Score", f"{project_score:.1f}/10", self._get_rating_color(project_score/10)],
+        ]
+        
+        summary_table = Table(summary_data, colWidths=[2.5*inch, 1.5*inch, 1*inch])
+        summary_table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), HexColor('#2E86AB')),
+            ('TEXTCOLOR', (0, 0), (-1, 0), white),
+            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
+            ('FONTSIZE', (0, 0), (-1, -1), 12),
+            ('GRID', (0, 0), (-1, -1), 1, black),
+            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+        ]))
+        
+        story.append(summary_table)
+        story.append(Spacer(1, 0.3*inch))
+        
+        # Overall summary text
+        if result.get('overall_summary'):
+            story.append(Paragraph("Overall Assessment:", self.styles['Heading3']))
+            story.append(Paragraph(result['overall_summary'], self.styles['FeedbackText']))
+        
+        story.append(Spacer(1, 0.3*inch))
+        return story
+    
+    def _build_cv_evaluation_section(self, task_data: dict) -> list:
+        """Build CV evaluation section"""
+        story = []
+        result = task_data.get('result', {})
+        cv_details = result.get('cv_evaluation_details', {})
+        
+        story.append(Paragraph("CV Evaluation", self.styles['CustomSubtitle']))
+        
+        # CV Match Rate
+        cv_match = result.get('cv_match_rate', 0) * 100
+        story.append(Paragraph(f"Match Rate: {cv_match:.1f}%", self.styles['ScoreText']))
+        
+        # Detailed scores
+        if cv_details:
+            cv_scores = [
+                ["Evaluation Criteria", "Score", "Rating"],
+                ["Technical Skills Match", f"{cv_details.get('technical_skills_match', 0)}/5", self._get_score_rating(cv_details.get('technical_skills_match', 0))],
+                ["Experience Level", f"{cv_details.get('experience_level', 0)}/5", self._get_score_rating(cv_details.get('experience_level', 0))],
+                ["Relevant Achievements", f"{cv_details.get('relevant_achievements', 0)}/5", self._get_score_rating(cv_details.get('relevant_achievements', 0))],
+                ["Cultural Fit", f"{cv_details.get('cultural_fit', 0)}/5", self._get_score_rating(cv_details.get('cultural_fit', 0))],
+                ["Overall Score", f"{cv_details.get('overall_score', 0)}/5", self._get_score_rating(cv_details.get('overall_score', 0))]
+            ]
+            
+            cv_table = Table(cv_scores, colWidths=[2.5*inch, 1*inch, 1.5*inch])
+            cv_table.setStyle(TableStyle([
+                ('BACKGROUND', (0, 0), (-1, 0), HexColor('#A23B72')),
+                ('TEXTCOLOR', (0, 0), (-1, 0), white),
+                ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+                ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+                ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
+                ('FONTSIZE', (0, 0), (-1, -1), 11),
+                ('GRID', (0, 0), (-1, -1), 1, black),
+                ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+                ('ROWBACKGROUNDS', (0, 1), (-1, -1), [white, HexColor('#F8F9FA')])
+            ]))
+            
+            story.append(cv_table)
+        
+        # CV Feedback
+        if result.get('cv_feedback'):
+            story.append(Spacer(1, 0.2*inch))
+            story.append(Paragraph("Detailed Feedback:", self.styles['Heading3']))
+            story.append(Paragraph(result['cv_feedback'], self.styles['FeedbackText']))
+        
+        story.append(Spacer(1, 0.3*inch))
+        return story
+    
+    def _build_project_evaluation_section(self, task_data: dict) -> list:
+        """Build project evaluation section"""
+        story = []
+        result = task_data.get('result', {})
+        project_details = result.get('project_evaluation_details', {})
+        
+        story.append(Paragraph("Project Evaluation", self.styles['CustomSubtitle']))
+        
+        # Project Score
+        project_score = result.get('project_score', 0)
+        story.append(Paragraph(f"Project Score: {project_score:.1f}/10", self.styles['ScoreText']))
+        
+        # Detailed scores
+        if project_details:
+            project_scores = [
+                ["Evaluation Criteria", "Score", "Rating"],
+                ["Correctness", f"{project_details.get('correctness', 0)}/5", self._get_score_rating(project_details.get('correctness', 0))],
+                ["Code Quality", f"{project_details.get('code_quality', 0)}/5", self._get_score_rating(project_details.get('code_quality', 0))],
+                ["Resilience", f"{project_details.get('resilience', 0)}/5", self._get_score_rating(project_details.get('resilience', 0))],
+                ["Documentation", f"{project_details.get('documentation', 0)}/5", self._get_score_rating(project_details.get('documentation', 0))],
+                ["Creativity", f"{project_details.get('creativity', 0)}/5", self._get_score_rating(project_details.get('creativity', 0))],
+                ["Overall Score", f"{project_details.get('overall_score', 0)}/5", self._get_score_rating(project_details.get('overall_score', 0))]
+            ]
+            
+            project_table = Table(project_scores, colWidths=[2.5*inch, 1*inch, 1.5*inch])
+            project_table.setStyle(TableStyle([
+                ('BACKGROUND', (0, 0), (-1, 0), HexColor('#F18F01')),
+                ('TEXTCOLOR', (0, 0), (-1, 0), white),
+                ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+                ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+                ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
+                ('FONTSIZE', (0, 0), (-1, -1), 11),
+                ('GRID', (0, 0), (-1, -1), 1, black),
+                ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+                ('ROWBACKGROUNDS', (0, 1), (-1, -1), [white, HexColor('#F8F9FA')])
+            ]))
+            
+            story.append(project_table)
+        
+        # Project Feedback
+        if result.get('project_feedback'):
+            story.append(Spacer(1, 0.2*inch))
+            story.append(Paragraph("Detailed Feedback:", self.styles['Heading3']))
+            story.append(Paragraph(result['project_feedback'], self.styles['FeedbackText']))
+        
+        story.append(Spacer(1, 0.3*inch))
+        return story
+    
+    def _build_recommendations_section(self, task_data: dict) -> list:
+        """Build recommendations section"""
+        story = []
+        result = task_data.get('result', {})
+        
+        story.append(Paragraph("Recommendations", self.styles['CustomSubtitle']))
+        
+        cv_match = result.get('cv_match_rate', 0)
+        project_score = result.get('project_score', 0)
+        
+        # Generate recommendations based on scores
+        recommendations = []
+        
+        if cv_match >= 0.8:
+            recommendations.append("✓ Strong candidate with excellent skill alignment")
+        elif cv_match >= 0.6:
+            recommendations.append("→ Good candidate with minor skill gaps")
+        else:
+            recommendations.append("⚠ Candidate needs significant development")
+        
+        if project_score >= 8:
+            recommendations.append("✓ Excellent project execution and technical skills")
+        elif project_score >= 6:
+            recommendations.append("→ Good project quality with room for improvement")
+        else:
+            recommendations.append("⚠ Project quality needs significant improvement")
+        
+        # Overall recommendation
+        overall_score = (cv_match + project_score/10) / 2
+        if overall_score >= 0.75:
+            final_rec = "RECOMMENDED FOR HIRE"
+            color = HexColor('#28A745')
+        elif overall_score >= 0.6:
+            final_rec = "CONDITIONAL HIRE"
+            color = HexColor('#FFC107')
+        else:
+            final_rec = "NOT RECOMMENDED"
+            color = HexColor('#DC3545')
+        
+        for rec in recommendations:
+            story.append(Paragraph(rec, self.styles['Normal']))
+        
+        story.append(Spacer(1, 0.2*inch))
+        story.append(Paragraph(f"<b>Final Recommendation: <font color='{color}'>{final_rec}</font></b>", self.styles['Heading3']))
+        
+        return story
+    
+    def _get_score_rating(self, score: float) -> str:
+        """Convert numeric score to rating"""
+        if score >= 4.5:
+            return "Excellent"
+        elif score >= 3.5:
+            return "Good"
+        elif score >= 2.5:
+            return "Average"
+        elif score >= 1.5:
+            return "Below Average"
+        else:
+            return "Poor"
+    
+    def _get_rating_color(self, ratio: float) -> str:
+        """Get color based on score ratio"""
+        if ratio >= 0.8:
+            return "Excellent"
+        elif ratio >= 0.6:
+            return "Good"
+        elif ratio >= 0.4:
+            return "Average"
+        else:
+            return "Needs Improvement"
+    
+    def _extract_job_title(self, job_description: str) -> str:
+        """Extract job title from job description"""
+        if not job_description:
+            return "N/A"
+        
+        # Try to extract the first line or key phrase
+        lines = job_description.split('\n')
+        first_line = lines[0].strip()
+        
+        # Look for common job title patterns
+        if 'developer' in first_line.lower():
+            return first_line[:50] + "..." if len(first_line) > 50 else first_line
+        
+        return first_line[:50] + "..." if len(first_line) > 50 else first_line

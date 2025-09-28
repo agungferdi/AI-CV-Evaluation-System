@@ -11,3 +11,5 @@ tenacity
 httpx
 python-dotenv
 pypdf2
+reportlab
+reportlab

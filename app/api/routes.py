@@ -1,5 +1,5 @@
 from fastapi import APIRouter, UploadFile, File, Form, HTTPException, BackgroundTasks, Depends
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 import os
@@ -15,6 +15,7 @@ from app.models.schemas import (
 from app.models.database import EvaluationTask
 from app.services.database import get_db
 from app.services.evaluation_pipeline import get_evaluation_pipeline
+from app.services.pdf_service import PDFReportService
 from app.utils.document_processor import DocumentProcessor
 
 logger = logging.getLogger(__name__)
@@ -353,3 +354,69 @@ async def delete_task(
     except Exception as e:
         logger.error(f"Delete task error: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Failed to delete task: {str(e)}")
+
+
+@router.get("/export-pdf/{task_id}")
+async def export_task_pdf(
+    task_id: str,
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Export evaluation results as PDF report
+    
+    Args:
+        task_id: The task ID to export
+        
+    Returns:
+        PDF file as streaming response
+    """
+    try:
+        # Get task from database
+        result = await db.execute(
+            select(EvaluationTask).where(EvaluationTask.id == task_id)
+        )
+        task = result.scalar_one_or_none()
+        
+        if not task:
+            raise HTTPException(status_code=404, detail="Task not found")
+        
+        if task.status != TaskStatus.COMPLETED:
+            raise HTTPException(
+                status_code=400, 
+                detail="Task is not completed yet. Cannot export incomplete evaluation."
+            )
+        
+        # Initialize PDF service
+        pdf_service = PDFReportService()
+        
+        # Convert task to dictionary for PDF generation
+        task_data = {
+            'id': task.id,
+            'status': task.status,
+            'created_at': task.created_at,
+            'job_description': task.job_description,
+            'result': task.result
+        }
+        
+        # Generate PDF
+        pdf_buffer = await pdf_service.generate_evaluation_report(task_data)
+        
+        # Create filename
+        timestamp = task.created_at.strftime("%Y%m%d_%H%M%S")
+        filename = f"CV_Evaluation_Report_{task_id[:8]}_{timestamp}.pdf"
+        
+        # Return PDF as streaming response
+        return StreamingResponse(
+            pdf_buffer,
+            media_type="application/pdf",
+            headers={
+                "Content-Disposition": f"attachment; filename={filename}",
+                "Content-Type": "application/pdf"
+            }
+        )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"PDF export error: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error generating PDF: {str(e)}")
