@@ -1,31 +1,250 @@
-# CV Evaluation Backend
+# 🎯 AI-Powered CV Evaluation System
 
-A sophisticated AI-powered backend service that evaluates candidate CVs and project reports using Google's Gemini API. This system implements a complete evaluation pipeline with prompt chaining, retrieval-augmented generation (RAG), and async processing.
+> **A sophisticated backend service that evaluates candidate CVs and project reports using Google's Gemini API with intelligent scoring and professional PDF report generation.**
 
-## 🚀 Features
+![Python](https://img.shields.io/badge/Python-3.8+-blue.svg)
+![FastAPI](https://img.shields.io/badge/FastAPI-0.104.1-green.svg)
+![Gemini AI](https://img.shields.io/badge/Gemini-2.0%20Flash-orange.svg)
+![License](https://img.shields.io/badge/License-MIT-yellow.svg)
 
-- **AI-Driven Evaluation Pipeline**: 4-step evaluation process using Gemini 2.0 Flash
-- **Document Processing**: Support for PDF, DOCX, and TXT file formats
-- **Retrieval-Augmented Generation (RAG)**: ChromaDB for context-aware evaluations
+## 📖 Table of Contents
+- [🎯 Overview](#-overview)
+- [✨ Key Features](#-key-features)
+- [🏗️ System Architecture](#️-system-architecture)
+- [🚀 Getting Started](#-getting-started)
+- [📱 Using the System](#-using-the-system)
+- [📊 Understanding the Results](#-understanding-the-results)
+- [🔧 API Reference](#-api-reference)
+- [📄 PDF Report Generation](#-pdf-report-generation)
+- [🎨 FastAPI Interactive Documentation](#-fastapi-interactive-documentation)
+- [💡 Technical Implementation](#-technical-implementation)
+- [🔬 Testing & Validation](#-testing--validation)
+
+## 🎯 Overview
+
+This project implements a **complete AI-driven recruitment evaluation system** that:
+
+1. **Accepts candidate files** (CV + Project Report) in multiple formats (PDF, DOCX, TXT)
+2. **Analyzes content** using Google Gemini 2.0 Flash AI with advanced prompt engineering
+3. **Provides detailed scoring** across multiple evaluation criteria (1-5 scale)
+4. **Generates professional PDF reports** with comprehensive feedback
+5. **Offers real-time processing** with async background tasks and status tracking
+
+**Perfect for:** HR departments, recruitment agencies, technical hiring managers, and educational institutions conducting candidate assessments.
+
+## ✨ Key Features
+
+### 🤖 AI-Powered Intelligence
+- **Google Gemini 2.0 Flash Integration**: Latest LLM for advanced text processing
+- **4-Step Evaluation Pipeline**: Structured analysis with prompt chaining
+- **Retrieval-Augmented Generation (RAG)**: Context-aware evaluations using vector database
+- **Intelligent Scoring**: Standardized 1-5 scale evaluation across multiple criteria
+
+### 📄 Document Processing
+- **Multi-Format Support**: PDF, DOCX, and TXT file processing
+- **Smart Text Extraction**: Handles various document layouts and formatting
+- **File Validation**: Size limits, format checking, and error handling
+
+### ⚡ Performance & Reliability
 - **Async Processing**: Non-blocking evaluation with background tasks
-- **Resilient Architecture**: Retry logic, error handling, and failure simulation
-- **Comprehensive Scoring**: Standardized evaluation parameters for both CV and projects
-- **RESTful API**: Clean API design with automatic documentation
+- **Real-time Status**: Live progress tracking and completion notifications
+- **Error Resilience**: Retry logic, failure simulation, and graceful degradation
+- **Professional Reports**: Automated PDF generation with detailed analysis
 
-## 📋 API Endpoints
+### 🌐 User Experience
+- **Interactive API Documentation**: Built-in Swagger UI for easy testing
+- **One-Click Evaluation**: Upload files and start evaluation in single request
+- **RESTful Design**: Clean, intuitive API endpoints
+- **CORS Enabled**: Ready for frontend integration
 
-### Core Endpoints
+## 🏗️ System Architecture
 
-1. **POST /api/v1/upload** - Upload CV and project report files
-2. **POST /api/v1/evaluate** - Create evaluation task (returns immediately with task ID)  
-3. **GET /api/v1/result/{id}** - Retrieve evaluation results (supports polling for completion)
+```
+┌─────────────┐    ┌──────────────┐    ┌─────────────┐
+│  File Upload│───▶│   FastAPI    │───▶│  Background │
+│   (Multi)   │    │   Server     │    │   Tasks     │
+└─────────────┘    └──────────────┘    └─────────────┘
+                           │                      │
+                           ▼                      ▼
+                   ┌──────────────┐    ┌─────────────┐
+                   │   Database   │    │   Gemini    │
+                   │  (SQLite)    │    │     AI      │
+                   └──────────────┘    └─────────────┘
+                           │                      │
+                           ▼                      ▼
+                   ┌──────────────┐    ┌─────────────┐
+                   │    Vector    │    │     PDF     │
+                   │   Database   │    │  Generator  │
+                   │    (RAG)     │    │             │
+                   └──────────────┘    └─────────────┘
+```
 
-### Additional Endpoints
+### Core Components:
+- **FastAPI Server**: High-performance async web framework
+- **Gemini AI Service**: Google's latest LLM for intelligent evaluation
+- **Vector Database**: RAG implementation for context-aware scoring
+- **PDF Service**: Professional report generation with ReportLab
+- **Document Processor**: Multi-format text extraction utilities
 
-4. **GET /api/v1/tasks** - List all evaluation tasks
-5. **DELETE /api/v1/task/{id}** - Delete task and associated files
-6. **GET /** - API root information
-7. **GET /health** - Health check endpoint
+## 🚀 Getting Started
+
+### Prerequisites
+- Python 3.8 or higher
+- Google Gemini API key ([Get it here](https://aistudio.google.com/app/apikey))
+- Git
+
+### Installation
+
+1. **Clone the Repository**
+```bash
+git clone https://github.com/agungferdi/AI-CV-Evaluation-System.git
+cd AI-CV-Evaluation-System
+```
+
+2. **Create Virtual Environment**
+```bash
+python -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
+```
+
+3. **Install Dependencies**
+```bash
+pip install -r requirements.txt
+```
+
+4. **Setup Environment Variables**
+```bash
+# Copy the example file
+cp .env.example .env
+
+# Edit .env and add your Gemini API key:
+GEMINI_API_KEY=your_actual_api_key_here
+```
+
+5. **Test Your Setup**
+```bash
+python test_setup.py
+```
+You should see all tests pass ✅
+
+6. **Start the Server**
+```bash
+uvicorn main:app --reload --host 0.0.0.0 --port 8000
+```
+
+🎉 **Your server is now running at:** http://localhost:8000
+
+## 📱 Using the System
+
+### Step 1: Access the Interactive Documentation
+
+Navigate to **http://localhost:8000/docs** in your browser. You'll see the **FastAPI Interactive Documentation** (also called **Swagger UI**). This is an automatically generated web interface that lets you test all API endpoints directly from your browser - no coding required!
+
+![FastAPI Interactive Documentation](images/input%20data%20evaluate%20direct.png)
+
+**What is FastAPI Interactive Documentation?**
+- **Swagger UI**: A web-based interface that automatically documents your API
+- **Try it out**: Click any endpoint to test it directly in the browser
+- **Real-time testing**: Upload files, send requests, and see responses instantly
+- **No Postman needed**: Everything works directly in the web browser
+
+### Step 2: Upload Files and Start Evaluation (One-Click Method)
+
+**🎯 Recommended: Use the User-Friendly Endpoint**
+
+1. Find **`POST /api/v1/evaluate-direct`** (marked as "**Evaluate Files Direct**")
+2. Click **"Try it out"**
+3. Upload your files:
+   - **cv_file**: Your CV/resume (PDF, DOCX, or TXT)
+   - **project_report**: Your project documentation (PDF, DOCX, or TXT)
+   - **job_description**: The position you're applying for (optional)
+4. Click **"Execute"**
+
+![Evaluation Results](images/results%20evaluate%20direct.png)
+
+**Response:** You'll immediately get a task ID:
+```json
+{
+  "id": "a9d2b772-7b7c-4cd3-a9f0-ba4c7a0aef83",
+  "status": "queued"
+}
+```
+
+### Step 3: Check Your Results
+
+1. Find **`GET /api/v1/result/{task_id}`**
+2. Click **"Try it out"**
+3. Paste your task ID from Step 2
+4. Click **"Execute"**
+5. **Keep clicking Execute every 10-15 seconds** until status changes to **"completed"**
+
+![Get Results by ID](images/get%20result%20by%20id.png)
+
+### Step 4: View All Your Evaluations
+
+Use **`GET /api/v1/tasks`** to see all your evaluation history with results.
+
+### Step 5: Generate PDF Report
+
+1. Find **`GET /api/v1/export-pdf/{task_id}`**
+2. Enter your completed task ID
+3. Click **"Execute"**
+4. **Download** your professional PDF evaluation report!
+
+![PDF Export Route](images/try%20route%20convert%20to%20pdf.png)
+
+### 📋 Sample PDF Report Pages
+
+Here's what your generated PDF evaluation report looks like:
+
+**Page 1: Executive Summary & CV Evaluation**
+![PDF Report Page 1](images/result_1_pdf.png)
+
+**Page 2: Project Evaluation Details**
+![PDF Report Page 2](images/result_2_pdf.png)
+
+**Page 3: Recommendations & Final Assessment**
+![PDF Report Page 3](images/result_3_pdf.png)
+
+## 📊 Understanding the Results
+
+When your evaluation completes, you'll receive a comprehensive analysis:
+
+```json
+{
+  "cv_structure": {
+    "personal_info": { ... },
+    "skills": ["Python", "FastAPI", "Machine Learning"],
+    "experience": [ ... ],
+    "education": [ ... ]
+  },
+  "cv_match": {
+    "overall_score": 85,
+    "match_rate": "High Match",
+    "strengths": ["Strong technical skills", "Relevant experience"],
+    "improvement_areas": ["Could highlight leadership experience"],
+    "detailed_analysis": { ... }
+  },
+  "project_evaluation": {
+    "technical_complexity": 8,
+    "innovation_score": 7,
+    "implementation_quality": 9,
+    "relevance_to_position": 8
+  },
+  "recommendations": {
+    "cv_suggestions": [ ... ],
+    "project_improvements": [ ... ],
+    "interview_preparation": [ ... ]
+  }
+}
+```
+
+**Score Interpretation:**
+- **90-100**: Exceptional match
+- **80-89**: High match  
+- **70-79**: Good match
+- **60-69**: Moderate match
+- **Below 60**: Needs improvement
 
 ## 🏗️ Architecture & Design Choices
 
@@ -33,10 +252,158 @@ A sophisticated AI-powered backend service that evaluates candidate CVs and proj
 
 - **FastAPI**: High-performance async web framework with automatic OpenAPI docs
 - **Google Gemini 2.0 Flash**: Latest LLM for advanced text processing and evaluation
-- **ChromaDB**: Vector database for RAG implementation
-- **SQLAlchemy**: Async ORM for database operations
+- **SQLAlchemy**: Async ORM for database operations with SQLite
 - **Tenacity**: Retry library for resilient AI API calls
+- **ReportLab**: Professional PDF generation
 - **PyMuPDF & python-docx**: Document processing libraries
+
+### Key Design Decisions
+
+1. **Async-First Architecture**: All operations are asynchronous for better performance
+2. **Background Task Processing**: Long-running evaluations don't block the API
+3. **Multi-Format Support**: Handles PDF, DOCX, and TXT files seamlessly
+4. **Retry Logic**: Resilient AI API calls with exponential backoff
+5. **Interactive Documentation**: FastAPI auto-generates browsable API docs
+6. **Professional Reports**: Clean PDF exports for sharing results
+
+## 🔧 API Reference
+
+### Core Endpoints
+
+#### 1. **POST** `/api/v1/evaluate-direct` - One-Click Evaluation
+**Purpose**: Upload files and start evaluation in one step (user-friendly)
+
+**Parameters**:
+- `cv_file`: Your CV/resume file (PDF/DOCX/TXT)
+- `project_report`: Your project documentation (PDF/DOCX/TXT) 
+- `job_description`: Target position (optional text)
+
+**Response**:
+```json
+{
+  "id": "task-uuid",
+  "status": "queued",
+  "message": "Evaluation started successfully"
+}
+```
+
+#### 2. **GET** `/api/v1/result/{task_id}` - Check Results
+**Purpose**: Retrieve evaluation results by task ID
+
+**Response** (when completed):
+```json
+{
+  "id": "task-uuid",
+  "status": "completed",
+  "result": {
+    "cv_structure": { ... },
+    "cv_match": { ... },
+    "project_evaluation": { ... },
+    "recommendations": { ... }
+  }
+}
+```
+
+#### 3. **GET** `/api/v1/export-pdf/{task_id}` - Download PDF Report
+**Purpose**: Generate and download professional PDF evaluation report
+
+**Response**: PDF file download
+
+#### 4. **GET** `/api/v1/tasks` - View All Evaluations
+**Purpose**: List all your evaluation history
+
+### Advanced Endpoints
+
+#### **POST** `/api/v1/upload` - File Upload Only
+Upload files first, then evaluate separately (for advanced workflows)
+
+#### **POST** `/api/v1/evaluate` - Evaluate Uploaded Files
+Start evaluation for previously uploaded files
+
+## 📄 PDF Report Features
+
+Your generated PDF reports include:
+
+- **Executive Summary**: Overall match score and key findings
+- **CV Analysis**: Detailed breakdown of qualifications vs requirements
+- **Project Evaluation**: Technical assessment and innovation metrics
+- **Recommendations**: Specific improvement suggestions
+- **Professional Formatting**: Clean, shareable design
+
+## 🧪 Testing Your Setup
+
+Run the included test script to verify everything works:
+
+```bash
+python test_setup.py
+```
+
+**What it tests:**
+- ✅ Python environment
+- ✅ Required packages
+- ✅ Gemini API connection
+- ✅ Database initialization
+- ✅ File processing capabilities
+
+## 🔍 Troubleshooting
+
+### Common Issues
+
+**1. "Gemini API key not found"**
+```bash
+# Make sure your .env file has:
+GEMINI_API_KEY=your_actual_key_here
+```
+
+**2. "ModuleNotFoundError"**
+```bash
+# Reinstall dependencies:
+pip install -r requirements.txt
+```
+
+**3. "Database locked" error**
+```bash
+# Delete the database file and restart:
+rm evaluation.db
+uvicorn main:app --reload
+```
+
+**4. "Port already in use"**
+```bash
+# Use a different port:
+uvicorn main:app --reload --port 8080
+```
+
+**5. File upload fails**
+- Check file size (max 10MB)
+- Ensure supported format (PDF, DOCX, TXT)
+- Try with sample files first
+
+### Getting Help
+
+1. Check the logs in your terminal
+2. Test with the sample files (`sample_cv.txt`, `sample_project_report.txt`)
+3. Verify your Gemini API key is working
+4. Try the basic test script: `python test_setup.py`
+
+## 🤝 Contributing
+
+This project was built as part of a backend development assignment. Feel free to:
+
+- Report bugs or suggest improvements
+- Add new evaluation criteria
+- Enhance the PDF report formatting
+- Add support for more file formats
+
+## 📜 License
+
+This project is open source and available under the MIT License.
+
+---
+
+**Built with ❤️ using FastAPI and Google Gemini AI**
+
+*Ready to evaluate CVs like a pro? Start the server and visit http://localhost:8000/docs!*
 
 ### Key Design Decisions
 
@@ -213,7 +580,13 @@ curl -X GET "http://localhost:8000/api/v1/result/123e4567-e89b-12d3-a456-4266141
 
 ### Sample Test Files
 
-Create test files in the project directory:
+**Option 1: Use Your Own Files (Recommended)**
+- Upload your existing CV (PDF, DOCX, or TXT format)
+- Upload any project report or portfolio document
+- The system works with real documents and provides more meaningful results!
+
+**Option 2: Create Sample Files**
+If you don't have files ready, create these test files in the project directory:
 
 **sample_cv.txt**
 ```
@@ -273,6 +646,8 @@ CHALLENGES & SOLUTIONS:
 - Large file processing: Added streaming upload
 - Error resilience: Added retry mechanisms
 ```
+
+💡 **Pro Tip**: The AI evaluation works best with real documents! Try uploading your actual CV and a project you've worked on for the most accurate and useful feedback.
 
 ## 🔧 Configuration
 
